@@ -4,7 +4,7 @@
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
 <meta name="theme-color" content="#E07847"/>
-<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('au_theme')||'dark')</script>
+<script>document.documentElement.setAttribute('data-theme',localStorage.getItem('au_theme')||'dark');(function(){if(localStorage.getItem('au_user')==='Charlotte')document.documentElement.setAttribute('data-user','charlotte')})()</script>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Aussie"/>
@@ -95,9 +95,26 @@ textarea.inp{resize:none}
 .mdj-card{background:var(--bg2);border:0.5px solid var(--border);border-radius:var(--radius);padding:28px 22px;margin-top:6px}
 .mdj-text{font-size:15px;line-height:1.8;color:var(--text)}
 .mdj-from{font-size:12px;color:var(--text3);margin-top:18px;text-align:right;font-style:italic}
+/* read-only mode */
+html[data-user="charlotte"] .w-btn{display:none!important}
+/* identity overlay */
+#id-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
 </style>
 </head>
 <body>
+
+<!-- ID OVERLAY -->
+<div id="id-overlay" style="display:none">
+  <div style="text-align:center;max-width:320px;width:100%">
+    <div style="font-size:52px;margin-bottom:16px">🦘</div>
+    <div style="font-size:22px;font-weight:700;margin-bottom:6px">Aussie Tracker</div>
+    <div class="small muted" style="margin-bottom:28px">Qui utilise cette app ?</div>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <button class="btn" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="selectUser('Adri')">🦘 Adri <span class="muted small" style="margin-left:6px">— Australie</span></button>
+      <button class="btn" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="selectUser('Charlotte')">🌸 Charlotte <span class="muted small" style="margin-left:6px">— France</span></button>
+    </div>
+  </div>
+</div>
 
 <!-- NAV -->
 <nav id="nav">
@@ -128,6 +145,22 @@ const DB = {
   set:(k,v)=>{localStorage.setItem(k,JSON.stringify(v))}
 };
 const uid=()=>Math.random().toString(36).slice(2,9);
+
+// ─── IDENTITY ────────────────────────────────────────────
+const isAdri=()=>localStorage.getItem('au_user')==='Adri';
+function selectUser(name){
+  localStorage.setItem('au_user',name);
+  document.getElementById('id-overlay').style.display='none';
+  if(name==='Charlotte') document.documentElement.setAttribute('data-user','charlotte');
+  else document.documentElement.removeAttribute('data-user');
+  renderHome();
+}
+function changeProfile(){
+  localStorage.removeItem('au_user');
+  document.documentElement.removeAttribute('data-user');
+  document.getElementById('id-overlay').style.display='flex';
+}
+if(!localStorage.getItem('au_user')) document.getElementById('id-overlay').style.display='flex';
 
 // ─── THEME ───────────────────────────────────────────────
 let currentTheme='dark';
@@ -183,11 +216,15 @@ function renderHome(){
     {l:'Lieux visités',v:places.length,icon:'ti-map-pin',c:'#58d68d'},
   ];
   const d=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  const user=localStorage.getItem('au_user')||'';
   let html=`
     <div class="row-b" style="margin-bottom:20px;align-items:center">
       <div>
         <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">${d}</div>
         <div style="font-size:22px;font-weight:700">🦘 Aussie Tracker</div>
+        <button onclick="changeProfile()" style="margin-top:3px;background:none;border:none;cursor:pointer;color:var(--text3);font-size:11px;padding:0;font-family:inherit;display:inline-flex;align-items:center;gap:3px">
+          ${user==='Adri'?'🦘':'🌸'} ${user} <i class="ti ti-chevron-down" style="font-size:9px"></i>
+        </button>
       </div>
       <button id="theme-btn" onclick="toggleTheme()" aria-label="Changer de thème"><i id="theme-icon" class="ti ti-${currentTheme==='light'?'moon':'sun'}"></i></button>
     </div>
@@ -220,13 +257,15 @@ function renderHome(){
     if(!wrap)return;
     const data=snap.val();
     if(!data)return;
-    const reaction=data.liked
-      ?`<div class="small t-acc" style="margin-top:8px">Charlotte a ❤️ ton message</div>`
-      :`<div class="small muted" style="margin-top:8px">En attente de réaction…</div>`;
+    const adri=isAdri();
+    const label=adri?'💌 Ton mot du jour':'💌 Message d\'Adri';
+    const reaction=adri
+      ?(data.liked?`<div class="small t-acc" style="margin-top:8px">Charlotte a ❤️ ton message</div>`:`<div class="small muted" style="margin-top:8px">En attente de réaction…</div>`)
+      :(data.liked?`<div class="small t-acc" style="margin-top:8px">Tu as ❤️ ce message</div>`:`<div class="small muted" style="margin-top:8px">Appuie pour réagir 💌</div>`);
     wrap.innerHTML=`
       <div class="sec-title" style="margin-top:16px">Post-it</div>
       <div class="card" style="cursor:pointer" onclick="go('postit')">
-        <div class="small muted" style="margin-bottom:6px">💌 Ton mot du jour</div>
+        <div class="small muted" style="margin-bottom:6px">${label}</div>
         <div style="font-size:14px;line-height:1.6">${esc(data.text)}</div>
         ${reaction}
       </div>`;
@@ -264,7 +303,7 @@ function renderJobs(){
         <button class="back-btn" onclick="jobsView='list';renderJobs()" style="margin-bottom:0">
           <i class="ti ti-arrow-left"></i>Retour
         </button>
-        <button class="btn btn-icon" onclick="deleteJob('${j.id}')" style="color:#f1948a"><i class="ti ti-trash"></i></button>
+        <button class="btn btn-icon w-btn" onclick="deleteJob('${j.id}')" style="color:#f1948a"><i class="ti ti-trash"></i></button>
       </div>
       <div class="card" style="margin-bottom:14px">
         <div class="row-b" style="margin-bottom:8px">
@@ -276,13 +315,13 @@ function renderJobs(){
         ${j.type?`<div class="small muted"><i class="ti ti-tag"></i> ${j.type}</div>`:''}
         ${j.notes?`<div style="font-size:13px;margin-top:8px;padding-top:8px;border-top:0.5px solid var(--border)">${j.notes}</div>`:''}
       </div>
-      <div class="sec-title">Statut</div>
-      <div class="ftabs">${Object.entries(ST).map(([k,[v]])=>`<button class="ftab ${j.status===k?'on':''}" onclick="updateJobStatus('${j.id}','${k}')">${v}</button>`).join('')}</div>
+      <div class="sec-title w-btn">Statut</div>
+      <div class="ftabs w-btn">${Object.entries(ST).map(([k,[v]])=>`<button class="ftab ${j.status===k?'on':''}" onclick="updateJobStatus('${j.id}','${k}')">${v}</button>`).join('')}</div>
       <div class="row-b" style="margin-bottom:10px">
         <div style="font-size:14px;font-weight:500"><i class="ti ti-message-circle"></i> Commentaires (${(j.comments||[]).length})</div>
-        <button class="btn btn-acc btn-sm" onclick="toggleCmtForm('${j.id}')">+ Ajouter</button>
+        <button class="btn btn-acc btn-sm w-btn" onclick="toggleCmtForm('${j.id}')">+ Ajouter</button>
       </div>
-      <div id="cmt-form-${j.id}" style="display:none" class="card">
+      <div id="cmt-form-${j.id}" style="display:none" class="card w-btn">
         <textarea class="inp" id="cmt-txt-${j.id}" placeholder="Commentaire..." rows="3"></textarea>
         <button class="btn btn-acc" style="width:100%" onclick="saveComment('${j.id}')">Enregistrer</button>
       </div>
@@ -294,7 +333,7 @@ function renderJobs(){
   el.innerHTML=`
     <div class="row-b" style="margin-bottom:12px">
       <div class="h2" style="margin-bottom:0"><i class="ti ti-briefcase"></i>Jobs</div>
-      <button class="btn btn-acc btn-sm" onclick="jobsView='add';renderJobs()">+ Nouveau</button>
+      <button class="btn btn-acc btn-sm w-btn" onclick="jobsView='add';renderJobs()">+ Nouveau</button>
     </div>
     <div class="ftabs">
       ${[['all','Tous'],['applied','Candidatures'],['interview','Entretiens'],['working','En poste'],['done','Terminés']]
@@ -314,14 +353,15 @@ function renderJobs(){
         </div>`).join('')}`;
 }
 function saveJob(){
+  if(!isAdri())return;
   const t=document.getElementById('j-title').value.trim();
   if(!t)return;
   const jobs=DB.get('au_jobs',[]);
   jobs.push({id:uid(),title:t,company:document.getElementById('j-company').value,type:document.getElementById('j-type').value,location:document.getElementById('j-loc').value,status:document.getElementById('j-status').value,notes:document.getElementById('j-notes').value,comments:[],createdAt:new Date().toLocaleDateString('fr-FR')});
   DB.set('au_jobs',jobs);jobsView='list';renderJobs();
 }
-function deleteJob(id){const jobs=DB.get('au_jobs',[]).filter(j=>j.id!==id);DB.set('au_jobs',jobs);jobsView='list';renderJobs();}
-function updateJobStatus(id,status){const jobs=DB.get('au_jobs',[]).map(j=>j.id===id?{...j,status}:j);DB.set('au_jobs',jobs);renderJobs();}
+function deleteJob(id){if(!isAdri())return;const jobs=DB.get('au_jobs',[]).filter(j=>j.id!==id);DB.set('au_jobs',jobs);jobsView='list';renderJobs();}
+function updateJobStatus(id,status){if(!isAdri())return;const jobs=DB.get('au_jobs',[]).map(j=>j.id===id?{...j,status}:j);DB.set('au_jobs',jobs);renderJobs();}
 function toggleCmtForm(id){const f=document.getElementById('cmt-form-'+id);f.style.display=f.style.display==='none'?'block':'none';}
 function saveComment(id){
   const txt=document.getElementById('cmt-txt-'+id).value.trim();
@@ -365,7 +405,7 @@ function renderVocab(){
           ${card.example?`<div style="font-size:12px;color:var(--text2);font-style:italic">« ${card.example} »</div>`:''}
           <div style="display:flex;gap:10px;justify-content:center;margin-top:18px">
             <button class="btn" onclick="quizIdx++;renderVocab()">Suivant</button>
-            <button class="btn btn-acc" onclick="learnWord('${card.id}')"><i class="ti ti-check"></i>Appris</button>
+            <button class="btn btn-acc w-btn" onclick="learnWord('${card.id}')"><i class="ti ti-check"></i>Appris</button>
           </div>
         </div>
         <button id="quiz-btn" class="btn btn-acc" style="margin-top:18px" onclick="document.getElementById('quiz-reveal').style.display='block';document.getElementById('quiz-btn').style.display='none'">Révéler</button>
@@ -377,8 +417,8 @@ function renderVocab(){
     <div class="row-b" style="margin-bottom:10px">
       <div class="h2" style="margin-bottom:0"><i class="ti ti-book"></i>Vocabulaire</div>
       <div class="row">
-        ${unlearned.length?`<button class="btn btn-sm" onclick="vocabView='quiz';quizIdx=0;renderVocab()">Quiz</button>`:''}
-        <button class="btn btn-acc btn-sm" onclick="vocabView='add';renderVocab()">+</button>
+        ${unlearned.length?`<button class="btn btn-sm w-btn" onclick="vocabView='quiz';quizIdx=0;renderVocab()">Quiz</button>`:''}
+        <button class="btn btn-acc btn-sm w-btn" onclick="vocabView='add';renderVocab()">+</button>
       </div>
     </div>
     <div class="small muted" style="margin-bottom:11px">${vocab.filter(v=>v.learned).length} / ${vocab.length} mots appris</div>
@@ -396,14 +436,14 @@ function renderVocab(){
             <div class="small muted">${w.translation}</div>
             ${w.example?`<div style="font-size:11px;color:var(--text3);font-style:italic">« ${w.example} »</div>`:''}
           </div>
-          <button class="btn-icon" onclick="toggleLearn('${w.id}')"><i class="ti ${w.learned?'ti-circle-check':'ti-circle'}" style="color:${w.learned?'#58d68d':'var(--text3)'}"></i></button>
-          <button class="btn-icon" onclick="deleteVocab('${w.id}')"><i class="ti ti-trash"></i></button>
+          <button class="btn-icon w-btn" onclick="toggleLearn('${w.id}')"><i class="ti ${w.learned?'ti-circle-check':'ti-circle'}" style="color:${w.learned?'#58d68d':'var(--text3)'}"></i></button>
+          <button class="btn-icon w-btn" onclick="deleteVocab('${w.id}')"><i class="ti ti-trash"></i></button>
         </div>`).join('')}`;
 }
-function saveVocab(){const w=document.getElementById('v-word').value.trim();if(!w)return;const v=DB.get('au_vocab',[]);v.push({id:uid(),word:w,translation:document.getElementById('v-trad').value,example:document.getElementById('v-ex').value,category:document.getElementById('v-cat').value,learned:false});DB.set('au_vocab',v);vocabView='list';renderVocab();}
-function toggleLearn(id){const v=DB.get('au_vocab',[]).map(x=>x.id===id?{...x,learned:!x.learned}:x);DB.set('au_vocab',v);renderVocab();}
+function saveVocab(){if(!isAdri())return;const w=document.getElementById('v-word').value.trim();if(!w)return;const v=DB.get('au_vocab',[]);v.push({id:uid(),word:w,translation:document.getElementById('v-trad').value,example:document.getElementById('v-ex').value,category:document.getElementById('v-cat').value,learned:false});DB.set('au_vocab',v);vocabView='list';renderVocab();}
+function toggleLearn(id){if(!isAdri())return;const v=DB.get('au_vocab',[]).map(x=>x.id===id?{...x,learned:!x.learned}:x);DB.set('au_vocab',v);renderVocab();}
 function learnWord(id){toggleLearn(id);quizIdx++;renderVocab();}
-function deleteVocab(id){DB.set('au_vocab',DB.get('au_vocab',[]).filter(v=>v.id!==id));renderVocab();}
+function deleteVocab(id){if(!isAdri())return;DB.set('au_vocab',DB.get('au_vocab',[]).filter(v=>v.id!==id));renderVocab();}
 
 // ─── FORMATION ────────────────────────────────────────────
 let formSub='certifs',formView='list';
@@ -445,7 +485,7 @@ function renderFormation(){
     </div>
     ${formSub==='certifs'?`
       <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
-        <button class="btn btn-acc btn-sm" onclick="formView='add-certif';renderFormation()">+ Ajouter</button>
+        <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-certif';renderFormation()">+ Ajouter</button>
       </div>
       ${certifs.length===0?`<div class="empty"><i class="ti ti-certificate"></i>Aucune certification</div>`:
         certifs.map(c=>`
@@ -457,7 +497,7 @@ function renderFormation(){
             ${c.date?`<div class="small muted"><i class="ti ti-calendar"></i> ${c.date}</div>`:''}
             ${c.cost?`<div class="small t-acc" style="margin-top:2px">${parseFloat(c.cost).toFixed(2)} AUD</div>`:''}
             ${c.notes?`<div class="small muted" style="margin-top:4px">${c.notes}</div>`:''}
-            <select class="inp" style="margin-top:8px;margin-bottom:0;font-size:11px;padding:4px 8px;width:auto" onchange="updateCertifStatus('${c.id}',this.value)">
+            <select class="inp w-btn" style="margin-top:8px;margin-bottom:0;font-size:11px;padding:4px 8px;width:auto" onchange="updateCertifStatus('${c.id}',this.value)">
               ${Object.entries(CST).map(([k,[v]])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}
             </select>
           </div>`).join('')}`
@@ -470,7 +510,7 @@ function renderFormation(){
         </div>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
-        <button class="btn btn-acc btn-sm" onclick="formView='add-exp';renderFormation()">+ Dépense</button>
+        <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-exp';renderFormation()">+ Dépense</button>
       </div>
       ${expenses.length===0?`<div class="empty"><i class="ti ti-coin"></i>Aucune dépense</div>`:
         [...expenses].reverse().map(e=>`
@@ -482,15 +522,15 @@ function renderFormation(){
               </div>
               <div class="row">
                 <span style="font-weight:500;color:var(--acc)">${parseFloat(e.amount).toFixed(2)}</span>
-                <button class="btn-icon" onclick="deleteExpense('${e.id}')"><i class="ti ti-trash"></i></button>
+                <button class="btn-icon w-btn" onclick="deleteExpense('${e.id}')"><i class="ti ti-trash"></i></button>
               </div>
             </div>
           </div>`).join('')}`}`;
 }
-function saveCertif(){const n=document.getElementById('c-name').value.trim();if(!n)return;const c=DB.get('au_certifs',[]);c.push({id:uid(),name:n,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value});DB.set('au_certifs',c);formView='list';renderFormation();}
-function saveExpense(){const d=document.getElementById('e-desc').value.trim(),a=document.getElementById('e-amt').value;if(!d||!a)return;const e=DB.get('au_expenses',[]);e.push({id:uid(),description:d,amount:a,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value});DB.set('au_expenses',e);formView='list';renderFormation();}
-function updateCertifStatus(id,s){DB.set('au_certifs',DB.get('au_certifs',[]).map(c=>c.id===id?{...c,status:s}:c));renderFormation();}
-function deleteExpense(id){DB.set('au_expenses',DB.get('au_expenses',[]).filter(e=>e.id!==id));renderFormation();}
+function saveCertif(){if(!isAdri())return;const n=document.getElementById('c-name').value.trim();if(!n)return;const c=DB.get('au_certifs',[]);c.push({id:uid(),name:n,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value});DB.set('au_certifs',c);formView='list';renderFormation();}
+function saveExpense(){if(!isAdri())return;const d=document.getElementById('e-desc').value.trim(),a=document.getElementById('e-amt').value;if(!d||!a)return;const e=DB.get('au_expenses',[]);e.push({id:uid(),description:d,amount:a,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value});DB.set('au_expenses',e);formView='list';renderFormation();}
+function updateCertifStatus(id,s){if(!isAdri())return;DB.set('au_certifs',DB.get('au_certifs',[]).map(c=>c.id===id?{...c,status:s}:c));renderFormation();}
+function deleteExpense(id){if(!isAdri())return;DB.set('au_expenses',DB.get('au_expenses',[]).filter(e=>e.id!==id));renderFormation();}
 
 // ─── TASKS ────────────────────────────────────────────────
 let tasksView='list',tasksFilter='todo';
@@ -522,7 +562,7 @@ function renderTasks(){
   el.innerHTML=`
     <div class="row-b" style="margin-bottom:13px">
       <div class="h2" style="margin-bottom:0"><i class="ti ti-checklist"></i>Tâches</div>
-      <button class="btn btn-acc btn-sm" onclick="tasksView='add';renderTasks()">+ Ajouter</button>
+      <button class="btn btn-acc btn-sm w-btn" onclick="tasksView='add';renderTasks()">+ Ajouter</button>
     </div>
     <div class="ftabs">
       ${[['todo',`À faire (${tasks.filter(t=>!t.done).length})`],['done','Faites'],['all','Toutes']].map(([k,v])=>`<button class="ftab ${tasksFilter===k?'on':''}" style="flex:1;text-align:center;font-size:11px" onclick="tasksFilter='${k}';renderTasks()">${v}</button>`).join('')}
@@ -530,7 +570,7 @@ function renderTasks(){
     ${filtered.length===0?`<div class="empty"><i class="ti ti-checklist"></i>Aucune tâche</div>`:
       filtered.map(t=>`
         <div class="card" style="display:flex;align-items:center;gap:11px;opacity:${t.done?0.6:1}">
-          <button class="btn-icon" onclick="toggleTask('${t.id}')">
+          <button class="btn-icon w-btn" onclick="toggleTask('${t.id}')">
             <i class="ti ${t.done?'ti-circle-check':'ti-circle'}" style="font-size:20px;color:${t.done?'#58d68d':'var(--text3)'}"></i>
           </button>
           <div style="flex:1">
@@ -539,13 +579,13 @@ function renderTasks(){
               <i class="ti ${PRIO[t.priority][1]}" style="color:${PRIO[t.priority][2]}"></i>${t.category}
             </div>
           </div>
-          <button class="btn-icon" onclick="deleteTask('${t.id}')"><i class="ti ti-trash"></i></button>
+          <button class="btn-icon w-btn" onclick="deleteTask('${t.id}')"><i class="ti ti-trash"></i></button>
         </div>`).join('')}`;
 }
 function selectPrio(k){document.getElementById('t-prio').value=k;document.querySelectorAll('[id^="prio-"]').forEach(b=>b.classList.remove('on'));const btn=document.getElementById('prio-'+k);if(btn)btn.classList.add('on');}
-function saveTask(){const t=document.getElementById('t-text').value.trim();if(!t)return;const tasks=DB.get('au_tasks',[]);tasks.push({id:uid(),text:t,category:document.getElementById('t-cat').value,priority:document.getElementById('t-prio').value,done:false});DB.set('au_tasks',tasks);tasksView='list';renderTasks();}
-function toggleTask(id){DB.set('au_tasks',DB.get('au_tasks',[]).map(t=>t.id===id?{...t,done:!t.done}:t));renderTasks();}
-function deleteTask(id){DB.set('au_tasks',DB.get('au_tasks',[]).filter(t=>t.id!==id));renderTasks();}
+function saveTask(){if(!isAdri())return;const t=document.getElementById('t-text').value.trim();if(!t)return;const tasks=DB.get('au_tasks',[]);tasks.push({id:uid(),text:t,category:document.getElementById('t-cat').value,priority:document.getElementById('t-prio').value,done:false});DB.set('au_tasks',tasks);tasksView='list';renderTasks();}
+function toggleTask(id){if(!isAdri())return;DB.set('au_tasks',DB.get('au_tasks',[]).map(t=>t.id===id?{...t,done:!t.done}:t));renderTasks();}
+function deleteTask(id){if(!isAdri())return;DB.set('au_tasks',DB.get('au_tasks',[]).filter(t=>t.id!==id));renderTasks();}
 
 // ─── PARCOURS ─────────────────────────────────────────────
 let parcoursView='list',selEmoji='📍';
@@ -572,7 +612,7 @@ function renderParcours(){
   el.innerHTML=`
     <div class="row-b" style="margin-bottom:18px">
       <div class="h2" style="margin-bottom:0"><i class="ti ti-map-pin"></i>Parcours</div>
-      <button class="btn btn-acc btn-sm" onclick="parcoursView='add';selEmoji='📍';renderParcours()">+ Lieu</button>
+      <button class="btn btn-acc btn-sm w-btn" onclick="parcoursView='add';selEmoji='📍';renderParcours()">+ Lieu</button>
     </div>
     ${places.length===0?`<div class="empty"><i class="ti ti-world"></i>Ton aventure commence ici 🌏</div>`:`
       <div class="tl-wrap">
@@ -587,15 +627,15 @@ function renderParcours(){
                   <div class="small muted">${p.date}${p.duration?' · '+p.duration:''}</div>
                   ${p.notes?`<div style="font-size:12px;color:var(--text2);margin-top:5px">${p.notes}</div>`:''}
                 </div>
-                <button class="btn-icon" onclick="deletePlace('${p.id}')"><i class="ti ti-trash"></i></button>
+                <button class="btn-icon w-btn" onclick="deletePlace('${p.id}')"><i class="ti ti-trash"></i></button>
               </div>
             </div>
           </div>`).join('')}
       </div>`}`;
 }
 function pickEmoji(e){selEmoji=e;document.querySelectorAll('.ep-btn').forEach(b=>b.classList.remove('on'));const btn=document.getElementById('ep-'+e.codePointAt(0));if(btn)btn.classList.add('on');}
-function savePlace(){const l=document.getElementById('p-loc').value.trim();if(!l)return;const p=DB.get('au_places',[]);p.push({id:uid(),location:l,date:document.getElementById('p-date').value,duration:document.getElementById('p-dur').value,notes:document.getElementById('p-notes').value,emoji:selEmoji});DB.set('au_places',p);parcoursView='list';renderParcours();}
-function deletePlace(id){DB.set('au_places',DB.get('au_places',[]).filter(p=>p.id!==id));renderParcours();}
+function savePlace(){if(!isAdri())return;const l=document.getElementById('p-loc').value.trim();if(!l)return;const p=DB.get('au_places',[]);p.push({id:uid(),location:l,date:document.getElementById('p-date').value,duration:document.getElementById('p-dur').value,notes:document.getElementById('p-notes').value,emoji:selEmoji});DB.set('au_places',p);parcoursView='list';renderParcours();}
+function deletePlace(id){if(!isAdri())return;DB.set('au_places',DB.get('au_places',[]).filter(p=>p.id!==id));renderParcours();}
 
 // ─── FIREBASE + POST-IT ──────────────────────────────────
 firebase.initializeApp({
@@ -612,31 +652,17 @@ const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'
 
 function renderPostit(){
   const el=document.getElementById('postit');
-  const user=localStorage.getItem('au_user');
+  const user=localStorage.getItem('au_user')||'';
   fbRef.off();
-  if(!user){
-    el.innerHTML=`
-      <div style="padding:20px 0;text-align:center">
-        <div style="font-size:52px;margin-bottom:16px">💌</div>
-        <div style="font-size:20px;font-weight:700;margin-bottom:6px">Qui es-tu ?</div>
-        <div class="small muted" style="margin-bottom:24px">Ce choix sera mémorisé sur cet appareil</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button class="btn" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="setPostitUser('Adri')">🦘 Adri <span class="muted small" style="margin-left:4px">— Australie</span></button>
-          <button class="btn" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="setPostitUser('Charlotte')">🌸 Charlotte <span class="muted small" style="margin-left:4px">— France</span></button>
-        </div>
-      </div>`;
-    return;
-  }
-  const isAdri=user==='Adri';
   el.innerHTML=`
     <div class="row-b" style="margin-bottom:20px">
       <div class="h2" style="margin-bottom:0">💌 Post-it</div>
-      <button class="btn-icon" style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px" onclick="setPostitUser(null)">
+      <button class="btn-icon" style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px" onclick="changeProfile()">
         ${esc(user)} <i class="ti ti-pencil" style="font-size:11px"></i>
       </button>
     </div>
     <div id="mdj-display"></div>
-    ${isAdri?`
+    ${isAdri()?`
       <div class="sec-title" style="margin-top:20px">Nouveau message</div>
       <textarea class="inp" id="mdj-inp" rows="5" placeholder="Écris quelque chose pour Charlotte…"></textarea>
       <button class="btn btn-acc" style="width:100%;justify-content:center" onclick="saveMotDuJour()">
@@ -647,14 +673,14 @@ function renderPostit(){
     if(!display)return;
     const data=snap.val();
     if(!data){
-      display.innerHTML=isAdri
+      display.innerHTML=isAdri()
         ?`<div class="empty"><i class="ti ti-mail"></i><div>Aucun message envoyé</div></div>`
         :`<div class="empty"><i class="ti ti-heart"></i><div>Pas encore de message 🌸</div></div>`;
       return;
     }
     const d=new Date(data.ts);
     const date=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long'})+' à '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-    if(isAdri){
+    if(isAdri()){
       display.innerHTML=`
         <div class="sec-title">Message actuel</div>
         <div class="mdj-card">
@@ -674,15 +700,11 @@ function renderPostit(){
     }
   });
 }
-function setPostitUser(name){
-  if(name) localStorage.setItem('au_user',name);
-  else localStorage.removeItem('au_user');
-  renderPostit();
-}
 function likeMotDuJour(){
   fbRef.update({liked:true});
 }
 function saveMotDuJour(){
+  if(!isAdri())return;
   const inp=document.getElementById('mdj-inp');
   const text=(inp?.value||'').trim();
   if(!text)return;
