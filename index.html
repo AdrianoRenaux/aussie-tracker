@@ -26,7 +26,7 @@ html[data-theme="light"]{
   --border:rgba(30,26,20,0.12);--border2:rgba(30,26,20,0.07);
 }
 /* theme toggle button */
-#theme-btn{position:fixed;top:14px;right:14px;z-index:200;width:36px;height:36px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:color .15s,background .15s}
+#theme-btn{width:36px;height:36px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:color .15s,background .15s;flex-shrink:0}
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:72px}
 /* nav */
 #nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:0.5px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
@@ -95,9 +95,6 @@ textarea.inp{resize:none}
 </head>
 <body>
 
-<!-- THEME TOGGLE -->
-<button id="theme-btn" onclick="toggleTheme()" aria-label="Changer de thème"><i id="theme-icon" class="ti"></i></button>
-
 <!-- NAV -->
 <nav id="nav">
   <button class="nav-item on" data-tab="home" onclick="go('home')"><i class="ti ti-home"></i>Accueil</button>
@@ -125,14 +122,18 @@ const DB = {
 const uid=()=>Math.random().toString(36).slice(2,9);
 
 // ─── THEME ───────────────────────────────────────────────
+let currentTheme='dark';
 function applyTheme(t){
+  currentTheme=t;
   document.documentElement.setAttribute('data-theme',t);
-  document.getElementById('theme-icon').className='ti ti-'+(t==='light'?'moon':'sun');
+  const icon=document.getElementById('theme-icon');
+  if(icon) icon.className='ti ti-'+(t==='light'?'moon':'sun');
 }
 function toggleTheme(){
-  const t=document.documentElement.getAttribute('data-theme')==='light'?'dark':'light';
+  const t=currentTheme==='light'?'dark':'light';
   localStorage.setItem('au_theme',t);
   applyTheme(t);
+  if(currentTab==='home') renderHome();
 }
 applyTheme(localStorage.getItem('au_theme')||'dark');
 
@@ -175,9 +176,12 @@ function renderHome(){
   ];
   const d=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   let html=`
-    <div style="margin-bottom:20px">
-      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">${d}</div>
-      <div style="font-size:22px;font-weight:700">🦘 Aussie Tracker</div>
+    <div class="row-b" style="margin-bottom:20px;align-items:center">
+      <div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:4px">${d}</div>
+        <div style="font-size:22px;font-weight:700">🦘 Aussie Tracker</div>
+      </div>
+      <button id="theme-btn" onclick="toggleTheme()" aria-label="Changer de thème"><i id="theme-icon" class="ti ti-${currentTheme==='light'?'moon':'sun'}"></i></button>
     </div>
     <div class="stats">${stats.map(s=>`
       <div class="stat">
