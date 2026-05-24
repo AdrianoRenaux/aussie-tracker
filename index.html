@@ -319,6 +319,8 @@ function renderHome(){
   const jobs=DB.get('au_jobs',[]);
   const tasks=DB.get('au_tasks',[]);
   const places=DB.get('au_places',[]);
+  const vocab=DB.get('au_vocab',[]);
+  const lastWord=vocab.length?vocab[vocab.length-1]:null;
   const activeJobs=jobs.filter(j=>j.status!=='done').slice(0,2);
   const highTasks=tasks.filter(t=>!t.done&&t.priority==='high');
   const lastPlace=[...places].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
@@ -379,6 +381,16 @@ function renderHome(){
         </div>
         <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--text3)"></i>
       </div>
+    </div>`;
+  }
+
+  // ── VOCABULAIRE ─────────────────────────────────────────
+  if(lastWord){
+    html+=`<div class="sec-title" style="margin-top:28px">Vocabulaire</div>
+    <div class="card" style="padding:18px 20px;cursor:pointer" onclick="go('vocab')">
+      <div style="font-size:18px;font-weight:700;margin-bottom:5px">${lastWord.word}</div>
+      <div style="font-size:14px;color:var(--text2)">${lastWord.translation}</div>
+      ${lastWord.category?`<div class="small muted" style="margin-top:8px">${lastWord.category}</div>`:''}
     </div>`;
   }
 
