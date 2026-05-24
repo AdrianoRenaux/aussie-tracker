@@ -105,6 +105,11 @@ textarea.inp{resize:none}
 html[data-user="charlotte"] .w-btn{display:none!important}
 /* identity overlay */
 #id-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px}
+/* tutorial overlay */
+#tuto-overlay{position:fixed;inset:0;z-index:9998;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:28px 20px}
+.tuto-dots{display:flex;gap:7px;justify-content:center;margin-bottom:30px}
+.tuto-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .25s}
+.tuto-dot.on{background:var(--acc)}
 </style>
 </head>
 <body>
@@ -142,6 +147,11 @@ html[data-user="charlotte"] .w-btn{display:none!important}
       <button class="btn" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="selectUser('Charlotte')">🌸 Charlotte <span class="muted small" style="margin-left:6px">— France</span></button>
     </div>
   </div>
+</div>
+
+<!-- TUTORIAL OVERLAY -->
+<div id="tuto-overlay" style="display:none">
+  <div id="tuto-inner" style="text-align:center;max-width:320px;width:100%"></div>
 </div>
 
 <!-- NAV -->
@@ -209,8 +219,12 @@ const isAdri=()=>localStorage.getItem('au_user')==='Adri';
 function selectUser(name){
   localStorage.setItem('au_user',name);
   document.getElementById('id-overlay').style.display='none';
-  if(name==='Charlotte') document.documentElement.setAttribute('data-user','charlotte');
-  else document.documentElement.removeAttribute('data-user');
+  if(name==='Charlotte'){
+    document.documentElement.setAttribute('data-user','charlotte');
+    if(!localStorage.getItem('au_tuto_charlotte')) showTutorial();
+  } else {
+    document.documentElement.removeAttribute('data-user');
+  }
   renderHome();
 }
 function changeProfile(){
@@ -219,6 +233,41 @@ function changeProfile(){
   document.getElementById('id-overlay').style.display='flex';
 }
 if(!localStorage.getItem('au_user')) document.getElementById('id-overlay').style.display='flex';
+
+// ─── TUTORIAL ────────────────────────────────────────────
+const TUTO_STEPS=[
+  {emoji:'🌸',title:'Bienvenue Charlotte !',text:'Adri a préparé cette app pour partager son aventure australienne avec toi. Tout ce qu\'il vit là-bas, tu peux le suivre en direct depuis la France 🌏'},
+  {emoji:'🗺️',title:'Explore l\'app',text:'Navigue entre les onglets en bas de l\'écran. L\'accueil te donne un résumé, tu peux voir ses tâches, son vocabulaire anglais, ses formations et son parcours.'},
+  {emoji:'💌',title:'Le Post-it du jour',text:'Chaque jour, Adri t\'écrit un petit message depuis l\'Australie. Tu le retrouves dans l\'onglet Post-it — un message rien que pour toi 🥰'},
+  {emoji:'❤️',title:'Montre-lui que tu penses à lui',text:'Sous son message, tu peux appuyer sur ❤️. C\'est tout petit, mais ça compte énormément pour lui. Votre petit lien, à 17 000 km de distance.'},
+];
+let tutoStep=0;
+function showTutorial(){
+  tutoStep=0;
+  _renderTutoStep();
+  document.getElementById('tuto-overlay').style.display='flex';
+}
+function _renderTutoStep(){
+  const s=TUTO_STEPS[tutoStep];
+  const last=tutoStep===TUTO_STEPS.length-1;
+  const dots=TUTO_STEPS.map((_,i)=>`<div class="tuto-dot${i===tutoStep?' on':''}"></div>`).join('');
+  document.getElementById('tuto-inner').innerHTML=`
+    <div class="tuto-dots">${dots}</div>
+    <div style="font-size:58px;margin-bottom:22px">${s.emoji}</div>
+    <div style="font-size:21px;font-weight:700;margin-bottom:14px">${s.title}</div>
+    <div class="small muted" style="line-height:1.75;margin-bottom:36px">${s.text}</div>
+    <button class="btn btn-acc" style="width:100%;justify-content:center;padding:14px;font-size:15px" onclick="${last?'_finishTutorial()':'_nextTutoStep()'}">
+      ${last?'Commencer 🌸':'Suivant →'}
+    </button>
+    ${tutoStep>0?`<button onclick="_prevTutoStep()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:13px;padding:10px;margin-top:6px;font-family:inherit">← Retour</button>`:''}
+  `;
+}
+function _nextTutoStep(){if(tutoStep<TUTO_STEPS.length-1){tutoStep++;_renderTutoStep();}}
+function _prevTutoStep(){if(tutoStep>0){tutoStep--;_renderTutoStep();}}
+function _finishTutorial(){
+  localStorage.setItem('au_tuto_charlotte','1');
+  document.getElementById('tuto-overlay').style.display='none';
+}
 
 // ─── THEME ───────────────────────────────────────────────
 let currentTheme='dark';
