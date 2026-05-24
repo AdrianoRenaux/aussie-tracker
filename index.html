@@ -27,12 +27,12 @@ html[data-theme="light"]{
 }
 /* theme toggle button */
 #theme-btn{width:36px;height:36px;border-radius:50%;background:var(--bg2);border:0.5px solid var(--border);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;color:var(--text2);transition:color .15s,background .15s;flex-shrink:0}
-body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:72px}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px}
 /* nav */
 #nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:0.5px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px 6px;cursor:pointer;gap:3px;border:none;background:none;color:var(--text3);font-size:9px;font-family:inherit;transition:color .15s}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 2px 7px;cursor:pointer;gap:4px;border:none;background:none;color:var(--text3);font-size:10px;font-family:inherit;transition:color .15s}
 .nav-item.on{color:var(--acc)}
-.nav-item i{font-size:20px}
+.nav-item i{font-size:23px}
 /* page */
 .page{display:none;padding:18px 14px}
 .page.on{display:block}
@@ -263,7 +263,8 @@ function renderHome(){
   const vocab=DB.get('au_vocab',[]);
   const places=DB.get('au_places',[]);
   const totalDep=expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
-  const urgentTasks=tasks.filter(t=>!t.done).slice(0,3);
+  const PRIO_ORD={high:0,mid:1,low:2};
+  const urgentTasks=tasks.filter(t=>!t.done).sort((a,b)=>(PRIO_ORD[a.priority]??1)-(PRIO_ORD[b.priority]??1)).slice(0,3);
   const lastPlace=[...places].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
   const stats=[
     {l:'Jobs actifs',v:jobs.filter(j=>j.status!=='done').length,icon:'ti-briefcase',c:'#5dade2'},
@@ -295,11 +296,13 @@ function renderHome(){
     </div>`;
   if(urgentTasks.length){
     html+=`<div class="sec-title">À faire</div>`;
-    html+=urgentTasks.map(t=>`
-      <div class="card row" style="margin-bottom:7px">
-        <i class="ti ti-circle" style="color:${PRIO[t.priority][2]};font-size:13px"></i>
-        <span style="font-size:13px">${t.text}</span>
-      </div>`).join('');
+    html+=urgentTasks.map(t=>{
+      const high=t.priority==='high';
+      return `<div class="card row" style="margin-bottom:7px${high?';border-color:rgba(241,148,138,0.4);background:rgba(241,148,138,0.06)':''}">
+        ${high?'<span style="font-size:14px">🔴</span>':`<i class="ti ti-circle" style="color:${PRIO[t.priority][2]};font-size:12px"></i>`}
+        <span style="font-size:13px;font-weight:${high?'500':'400'}">${t.text}</span>
+      </div>`;
+    }).join('');
   }
   if(lastPlace){
     html+=`<div class="sec-title" style="margin-top:16px">Dernier lieu</div>
@@ -747,13 +750,15 @@ function renderPostit(){
         </div>`;
     }else{
       display.innerHTML=`
-        <div class="mdj-card" style="text-align:center;padding:36px 24px">
-          <div style="font-size:36px;margin-bottom:20px">💌</div>
-          <div class="mdj-text" style="text-align:left">${esc(data.text)}</div>
-          <div class="mdj-from">— Adri · ${date}</div>
-          <button onclick="likeMotDuJour()" class="btn ${data.liked?'btn-acc':''}" style="margin-top:20px;width:100%;justify-content:center;font-size:15px">
-            ❤️ ${data.liked?'Aimé !':'J\'aime'}
-          </button>
+        <div class="mdj-card" style="padding:0;overflow:hidden">
+          <div style="text-align:center;font-size:36px;padding:32px 22px 0">💌</div>
+          <div style="padding:22px 22px 24px">
+            <div class="mdj-text">${esc(data.text)}</div>
+            <div class="mdj-from">— Adri · ${date}</div>
+            <button onclick="likeMotDuJour()" class="btn ${data.liked?'btn-acc':''}" style="margin-top:20px;width:100%;justify-content:center;font-size:15px">
+              ❤️ ${data.liked?'Aimé !':'J\'aime'}
+            </button>
+          </div>
         </div>`;
     }
   });
