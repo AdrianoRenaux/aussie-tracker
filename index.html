@@ -340,8 +340,11 @@ function renderHome(){
       <button id="theme-btn" onclick="toggleTheme()" aria-label="Changer de thème" style="margin-top:4px"><i id="theme-icon" class="ti ti-${currentTheme==='light'?'moon':'sun'}"></i></button>
     </div>`;
 
+  // Pour Charlotte, le Post-it s'affiche en premier
+  if(!isAdri()) html+='<div id="home-mdj"></div>';
+
   // ── JOBS ────────────────────────────────────────────────
-  html+=`<div class="sec-title">Jobs</div>`;
+  html+=`<div class="sec-title"${!isAdri()?` style="margin-top:28px"`:''>Jobs</div>`;
   if(activeJobs.length){
     html+=activeJobs.map(j=>`
       <div class="card" style="padding:18px 20px;cursor:pointer;margin-bottom:10px" onclick="go('jobs')">
@@ -408,8 +411,8 @@ function renderHome(){
       </div>
     </div>`;
 
-  // POST-IT placeholder sits between parcours/tâches and SOS so Firebase fill lands in order
-  document.getElementById('home').innerHTML=html+'<div id="home-mdj"></div>'+sosHtml;
+  // Pour Adri, le placeholder Post-it s'insère entre vocab et SOS
+  document.getElementById('home').innerHTML=html+(isAdri()?'<div id="home-mdj"></div>':'')+sosHtml;
 
   // ── POST-IT (async) ─────────────────────────────────────
   fbRef.once('value',snap=>{
@@ -423,7 +426,7 @@ function renderHome(){
       ?(data.liked?`<div class="small t-acc" style="margin-top:10px">Charlotte a ❤️ ton message</div>`:`<div class="small muted" style="margin-top:10px">En attente de réaction…</div>`)
       :(data.liked?`<div class="small t-acc" style="margin-top:10px">Tu as ❤️ ce message</div>`:`<div class="small muted" style="margin-top:10px">Appuie pour réagir 💌</div>`);
     wrap.innerHTML=`
-      <div class="sec-title" style="margin-top:28px">Post-it</div>
+      <div class="sec-title" style="margin-top:${isAdri()?'28px':'0'}">Post-it</div>
       <div class="card" style="padding:18px 20px;cursor:pointer" onclick="go('postit')">
         <div class="small muted" style="margin-bottom:8px">${label}</div>
         <div style="font-size:14px;line-height:1.7">${esc(data.text)}</div>
@@ -889,11 +892,8 @@ function renderPostit(){
   const user=localStorage.getItem('au_user')||'';
   fbRef.off();
   el.innerHTML=`
-    <div class="row-b" style="margin-bottom:20px">
+    <div style="margin-bottom:20px">
       <div class="h2" style="margin-bottom:0">💌 Post-it</div>
-      <button class="btn-icon" style="font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px" onclick="changeProfile()">
-        ${esc(user)} <i class="ti ti-pencil" style="font-size:11px"></i>
-      </button>
     </div>
     <div id="mdj-display"></div>
     ${isAdri()?`
