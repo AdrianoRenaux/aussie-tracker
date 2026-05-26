@@ -198,7 +198,9 @@ const uid=()=>Math.random().toString(36).slice(2,9);
 // ─── LOCK ────────────────────────────────────────────────
 const UNLOCK_DATE=new Date(2026,6,2);
 function checkUnlocked(){return localStorage.getItem('au_unlock')==='1'||new Date()>=UNLOCK_DATE;}
+let _cdInterval=null;
 function startCountdown(){
+  if(_cdInterval) clearInterval(_cdInterval);
   const pad=n=>String(n).padStart(2,'0');
   function tick(){
     const diff=UNLOCK_DATE-new Date();
@@ -208,7 +210,18 @@ function startCountdown(){
     document.getElementById('cd-m').textContent=pad(Math.floor((diff%3600000)/60000));
     document.getElementById('cd-s').textContent=pad(Math.floor((diff%60000)/1000));
   }
-  tick();setInterval(tick,1000);
+  tick();_cdInterval=setInterval(tick,1000);
+}
+function logout(){
+  localStorage.removeItem('au_user');
+  localStorage.removeItem('au_unlock');
+  document.documentElement.removeAttribute('data-user');
+  document.getElementById('id-overlay').style.display='none';
+  document.getElementById('lock-code-form').style.display='none';
+  document.getElementById('lock-code-inp').value='';
+  document.getElementById('lock-code-inp').placeholder='····';
+  document.getElementById('lock-overlay').style.display='flex';
+  startCountdown();
 }
 function toggleLockCode(){
   const f=document.getElementById('lock-code-form');
@@ -411,8 +424,15 @@ function renderHome(){
       </div>
     </div>`;
 
+  const logoutHtml=`
+    <div style="text-align:center;margin-top:36px;padding-bottom:4px">
+      <button onclick="logout()" style="background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;font-family:inherit;display:inline-flex;align-items:center;gap:5px;padding:8px;opacity:0.6">
+        <i class="ti ti-logout" style="font-size:14px"></i> Se déconnecter
+      </button>
+    </div>`;
+
   // Pour Adri, le placeholder Post-it s'insère entre vocab et SOS
-  document.getElementById('home').innerHTML=html+(isAdri()?'<div id="home-mdj"></div>':'')+sosHtml;
+  document.getElementById('home').innerHTML=html+(isAdri()?'<div id="home-mdj"></div>':'')+sosHtml+logoutHtml;
 
   // ── POST-IT (async) ─────────────────────────────────────
   fbRef.once('value',snap=>{
