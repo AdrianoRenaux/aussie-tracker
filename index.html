@@ -344,7 +344,7 @@ function renderHome(){
   if(!isAdri()) html+='<div id="home-mdj"></div>';
 
   // ── JOBS ────────────────────────────────────────────────
-  html+=`<div class="sec-title"${!isAdri()?` style="margin-top:28px"`:''>Jobs</div>`;
+  html+=`<div class="sec-title"${!isAdri()?' style="margin-top:28px"':''>Jobs</div>`;
   if(activeJobs.length){
     html+=activeJobs.map(j=>`
       <div class="card" style="padding:18px 20px;cursor:pointer;margin-bottom:10px" onclick="go('jobs')">
