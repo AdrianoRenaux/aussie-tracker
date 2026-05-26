@@ -216,7 +216,6 @@ function logout(){
   localStorage.removeItem('au_user');
   localStorage.removeItem('au_unlock');
   document.documentElement.removeAttribute('data-user');
-  document.getElementById('id-overlay').style.display='none';
   document.getElementById('lock-code-form').style.display='none';
   document.getElementById('lock-code-inp').value='';
   document.getElementById('lock-code-inp').placeholder='····';
@@ -233,6 +232,7 @@ function tryUnlock(){
   if(inp.value==='2811'){
     localStorage.setItem('au_unlock','1');
     document.getElementById('lock-overlay').style.display='none';
+    if(!localStorage.getItem('au_user')) document.getElementById('id-overlay').style.display='flex';
   }else{inp.value='';inp.placeholder='Code incorrect…';}
 }
 if(checkUnlocked()) document.getElementById('lock-overlay').style.display='none';
