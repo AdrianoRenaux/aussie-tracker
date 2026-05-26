@@ -30,9 +30,9 @@ html[data-theme="light"]{
 body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:80px}
 /* nav */
 #nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:0.5px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom)}
-.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 2px 7px;cursor:pointer;gap:4px;border:none;background:none;color:var(--text3);font-size:10px;font-family:inherit;transition:color .15s}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:9px 2px 8px;cursor:pointer;gap:5px;border:none;background:none;color:var(--text3);font-size:11px;font-family:inherit;transition:color .15s;letter-spacing:.2px}
 .nav-item.on{color:var(--acc)}
-.nav-item i{font-size:23px}
+.nav-item i{font-size:26px}
 /* page */
 .page{display:none;padding:18px 14px}
 .page.on{display:block}
@@ -533,10 +533,12 @@ function saveComment(id){
 // ─── VOCAB ────────────────────────────────────────────────
 let vocabView='list',vocabFilter='all',quizIdx=0;
 const VCATS=['général','travail','mine','farm','hospo','slang'];
+const vocabCats=()=>[...VCATS,...DB.get('au_vcats',[])];
 function renderVocab(){
   const el=document.getElementById('vocab');
   const vocab=DB.get('au_vocab',[]);
   const unlearned=vocab.filter(v=>!v.learned);
+  const cats=vocabCats();
   if(vocabView==='add'){
     el.innerHTML=`
       <button class="back-btn" onclick="vocabView='list';renderVocab()"><i class="ti ti-arrow-left"></i>Retour</button>
@@ -544,8 +546,30 @@ function renderVocab(){
       <input class="inp" id="v-word" placeholder="Mot en anglais *"/>
       <input class="inp" id="v-trad" placeholder="Traduction *"/>
       <input class="inp" id="v-ex" placeholder="Exemple d'utilisation"/>
-      <select class="inp" id="v-cat">${VCATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      <select class="inp" id="v-cat">${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
       <button class="btn btn-acc" style="width:100%" onclick="saveVocab()">Enregistrer</button>`;
+    return;
+  }
+  if(vocabView==='cats'){
+    const custom=DB.get('au_vcats',[]);
+    el.innerHTML=`
+      <button class="back-btn" onclick="vocabView='list';renderVocab()"><i class="ti ti-arrow-left"></i>Retour</button>
+      <div class="h2"><i class="ti ti-tag"></i>Catégories</div>
+      <div class="sec-title">Par défaut</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
+        ${VCATS.map(c=>`<span style="padding:5px 12px;border-radius:20px;background:var(--bg3);font-size:13px;color:var(--text2)">${c}</span>`).join('')}
+      </div>
+      <div class="sec-title">Mes catégories</div>
+      ${custom.length===0?`<div class="small muted" style="margin-bottom:14px">Aucune catégorie personnalisée</div>`:''}
+      ${custom.map(c=>`
+        <div class="card row" style="margin-bottom:7px;justify-content:space-between">
+          <span style="font-size:14px">${c}</span>
+          <button class="btn-icon w-btn" onclick="deleteVCat('${c}')"><i class="ti ti-trash" style="font-size:16px"></i></button>
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="vcat-inp" placeholder="Nouvelle catégorie…" style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')addVCat()"/>
+        <button class="btn btn-acc w-btn" onclick="addVCat()"><i class="ti ti-plus"></i></button>
+      </div>`;
     return;
   }
   if(vocabView==='quiz'){
@@ -578,12 +602,13 @@ function renderVocab(){
       <div class="h2" style="margin-bottom:0"><i class="ti ti-book"></i>Vocabulaire</div>
       <div class="row">
         ${unlearned.length?`<button class="btn btn-sm w-btn" onclick="vocabView='quiz';quizIdx=0;renderVocab()">Quiz</button>`:''}
+        <button class="btn btn-sm w-btn" onclick="vocabView='cats';renderVocab()" style="padding:5px 10px"><i class="ti ti-tag" style="font-size:14px"></i></button>
         <button class="btn btn-acc btn-sm w-btn" onclick="vocabView='add';renderVocab()">+</button>
       </div>
     </div>
     <div class="small muted" style="margin-bottom:11px">${vocab.filter(v=>v.learned).length} / ${vocab.length} mots appris</div>
     <div class="ftabs">
-      ${[['all','Tous'],['unlearned','À apprendre'],...VCATS.map(c=>[c,c])].map(([k,v])=>`<button class="ftab ${vocabFilter===k?'on':''}" onclick="vocabFilter='${k}';renderVocab()">${v}</button>`).join('')}
+      ${[['all','Tous'],['unlearned','À apprendre'],...cats.map(c=>[c,c])].map(([k,v])=>`<button class="ftab ${vocabFilter===k?'on':''}" onclick="vocabFilter='${k}';renderVocab()">${v}</button>`).join('')}
     </div>
     ${filtered.length===0?`<div class="empty"><i class="ti ti-book"></i>Aucun mot</div>`:
       filtered.map(w=>`
@@ -604,35 +629,64 @@ function saveVocab(){if(!isAdri())return;const w=document.getElementById('v-word
 function toggleLearn(id){if(!isAdri())return;const v=DB.get('au_vocab',[]).map(x=>x.id===id?{...x,learned:!x.learned}:x);DB.set('au_vocab',v);renderVocab();}
 function learnWord(id){toggleLearn(id);quizIdx++;renderVocab();}
 function deleteVocab(id){if(!isAdri())return;DB.set('au_vocab',DB.get('au_vocab',[]).filter(v=>v.id!==id));renderVocab();}
+function addVCat(){if(!isAdri())return;const inp=document.getElementById('vcat-inp');const val=(inp.value||'').trim().toLowerCase();if(!val)return;const cats=DB.get('au_vcats',[]);if(cats.includes(val)||VCATS.includes(val))return;cats.push(val);DB.set('au_vcats',cats);inp.value='';renderVocab();}
+function deleteVCat(c){if(!isAdri())return;DB.set('au_vcats',DB.get('au_vcats',[]).filter(x=>x!==c));if(vocabFilter===c)vocabFilter='all';renderVocab();}
 
 // ─── FORMATION ────────────────────────────────────────────
-let formSub='certifs',formView='list';
+let formSub='certifs',formView='list',formEditId=null;
 const ECATS=['formation','transport','logement','nourriture','équipement','santé','autre'];
+const expCats=()=>[...ECATS,...DB.get('au_ecats',[])];
 function renderFormation(){
   const el=document.getElementById('formation');
   const certifs=DB.get('au_certifs',[]);
   const expenses=DB.get('au_expenses',[]);
-  if(formView==='add-certif'){
+  if(formView==='add-certif'||formView==='edit-certif'){
+    const ec=formEditId?certifs.find(c=>c.id===formEditId):null;
     el.innerHTML=`
-      <button class="back-btn" onclick="formView='list';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
-      <div class="h2"><i class="ti ti-certificate"></i>Nouvelle certification</div>
-      <input class="inp" id="c-name" placeholder="Nom *"/>
-      <select class="inp" id="c-status"><option value="todo">À faire</option><option value="in_progress">En cours</option><option value="done">Obtenu</option></select>
-      <input class="inp" type="date" id="c-date"/>
-      <input class="inp" type="number" id="c-cost" placeholder="Coût (AUD)"/>
-      <textarea class="inp" id="c-notes" placeholder="Notes..." rows="3"></textarea>
+      <button class="back-btn" onclick="formView='list';formEditId=null;renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
+      <div class="h2"><i class="ti ti-certificate"></i>${ec?'Modifier':'Nouvelle'} certification</div>
+      <input class="inp" id="c-name" placeholder="Nom *" value="${ec?ec.name:''}"/>
+      <select class="inp" id="c-status">
+        ${Object.entries(CST).map(([k,[v]])=>`<option value="${k}" ${(ec?ec.status:'todo')===k?'selected':''}>${v}</option>`).join('')}
+      </select>
+      <input class="inp" type="date" id="c-date" value="${ec?ec.date:''}"/>
+      <input class="inp" type="number" id="c-cost" placeholder="Coût (AUD)" value="${ec?ec.cost:''}"/>
+      <textarea class="inp" id="c-notes" placeholder="Notes..." rows="3">${ec?ec.notes:''}</textarea>
       <button class="btn btn-acc" style="width:100%" onclick="saveCertif()">Enregistrer</button>`;
     return;
   }
   if(formView==='add-exp'){
+    const cats=expCats();
     el.innerHTML=`
       <button class="back-btn" onclick="formView='list';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
       <div class="h2"><i class="ti ti-coin"></i>Nouvelle dépense</div>
       <input class="inp" id="e-desc" placeholder="Description *"/>
       <input class="inp" type="number" id="e-amt" placeholder="Montant (AUD) *"/>
-      <select class="inp" id="e-cat">${ECATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      <select class="inp" id="e-cat">${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
       <input class="inp" type="date" id="e-date" value="${new Date().toISOString().slice(0,10)}"/>
       <button class="btn btn-acc" style="width:100%" onclick="saveExpense()">Enregistrer</button>`;
+    return;
+  }
+  if(formView==='cats-exp'){
+    const custom=DB.get('au_ecats',[]);
+    el.innerHTML=`
+      <button class="back-btn" onclick="formView='list';formSub='expenses';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
+      <div class="h2"><i class="ti ti-tag"></i>Catégories de dépenses</div>
+      <div class="sec-title">Par défaut</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
+        ${ECATS.map(c=>`<span style="padding:5px 12px;border-radius:20px;background:var(--bg3);font-size:13px;color:var(--text2)">${c}</span>`).join('')}
+      </div>
+      <div class="sec-title">Mes catégories</div>
+      ${custom.length===0?`<div class="small muted" style="margin-bottom:14px">Aucune catégorie personnalisée</div>`:''}
+      ${custom.map(c=>`
+        <div class="card row" style="margin-bottom:7px;justify-content:space-between">
+          <span style="font-size:14px">${c}</span>
+          <button class="btn-icon w-btn" onclick="deleteECat('${c}')"><i class="ti ti-trash" style="font-size:16px"></i></button>
+        </div>`).join('')}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="inp" id="ecat-inp" placeholder="Nouvelle catégorie…" style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')addECat()"/>
+        <button class="btn btn-acc w-btn" onclick="addECat()"><i class="ti ti-plus"></i></button>
+      </div>`;
     return;
   }
   const totalDep=expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
@@ -645,21 +699,27 @@ function renderFormation(){
     </div>
     ${formSub==='certifs'?`
       <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
-        <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-certif';renderFormation()">+ Ajouter</button>
+        <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-certif';formEditId=null;renderFormation()">+ Ajouter</button>
       </div>
       ${certifs.length===0?`<div class="empty"><i class="ti ti-certificate"></i>Aucune certification</div>`:
         certifs.map(c=>`
           <div class="card">
             <div class="row-b" style="margin-bottom:6px">
-              <div style="font-weight:500">${c.name}</div>
+              <div style="font-weight:500;flex:1">${c.name}</div>
               <span class="pill ${CST[c.status][1]}">${CST[c.status][0]}</span>
             </div>
             ${c.date?`<div class="small muted"><i class="ti ti-calendar"></i> ${c.date}</div>`:''}
             ${c.cost?`<div class="small t-acc" style="margin-top:2px">${parseFloat(c.cost).toFixed(2)} AUD</div>`:''}
             ${c.notes?`<div class="small muted" style="margin-top:4px">${c.notes}</div>`:''}
-            <select class="inp w-btn" style="margin-top:8px;margin-bottom:0;font-size:11px;padding:4px 8px;width:auto" onchange="updateCertifStatus('${c.id}',this.value)">
-              ${Object.entries(CST).map(([k,[v]])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}
-            </select>
+            <div class="row-b" style="margin-top:10px">
+              <select class="inp w-btn" style="margin-bottom:0;font-size:11px;padding:4px 8px;width:auto" onchange="updateCertifStatus('${c.id}',this.value)">
+                ${Object.entries(CST).map(([k,[v]])=>`<option value="${k}" ${c.status===k?'selected':''}>${v}</option>`).join('')}
+              </select>
+              <div style="display:flex;gap:4px">
+                <button class="btn btn-sm w-btn" onclick="editCertif('${c.id}')"><i class="ti ti-pencil"></i></button>
+                <button class="btn btn-sm w-btn" style="color:#f1948a" onclick="deleteCertif('${c.id}')"><i class="ti ti-trash"></i></button>
+              </div>
+            </div>
           </div>`).join('')}`
     :`
       <div style="background:rgba(230,126,34,.12);border:0.5px solid rgba(230,126,34,.3);border-radius:var(--radius);padding:13px 15px;margin-bottom:14px">
@@ -669,7 +729,8 @@ function renderFormation(){
           ${Object.entries(bycat).map(([cat,amt])=>`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--bg2);color:var(--text2);border:0.5px solid var(--border)">${cat}: ${Math.round(amt)}</span>`).join('')}
         </div>
       </div>
-      <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+        <button class="btn btn-sm w-btn" onclick="formView='cats-exp';renderFormation()"><i class="ti ti-tag"></i> Catégories</button>
         <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-exp';renderFormation()">+ Dépense</button>
       </div>
       ${expenses.length===0?`<div class="empty"><i class="ti ti-coin"></i>Aucune dépense</div>`:
@@ -687,10 +748,23 @@ function renderFormation(){
             </div>
           </div>`).join('')}`}`;
 }
-function saveCertif(){if(!isAdri())return;const n=document.getElementById('c-name').value.trim();if(!n)return;const c=DB.get('au_certifs',[]);c.push({id:uid(),name:n,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value});DB.set('au_certifs',c);formView='list';renderFormation();}
+function saveCertif(){
+  if(!isAdri())return;
+  const n=document.getElementById('c-name').value.trim();
+  if(!n)return;
+  const data={name:n,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value};
+  const certifs=DB.get('au_certifs',[]);
+  if(formEditId){DB.set('au_certifs',certifs.map(c=>c.id===formEditId?{...c,...data}:c));}
+  else{certifs.push({id:uid(),...data});DB.set('au_certifs',certifs);}
+  formEditId=null;formView='list';renderFormation();
+}
+function editCertif(id){if(!isAdri())return;formEditId=id;formView='edit-certif';renderFormation();}
+function deleteCertif(id){if(!isAdri())return;DB.set('au_certifs',DB.get('au_certifs',[]).filter(c=>c.id!==id));renderFormation();}
 function saveExpense(){if(!isAdri())return;const d=document.getElementById('e-desc').value.trim(),a=document.getElementById('e-amt').value;if(!d||!a)return;const e=DB.get('au_expenses',[]);e.push({id:uid(),description:d,amount:a,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value});DB.set('au_expenses',e);formView='list';renderFormation();}
 function updateCertifStatus(id,s){if(!isAdri())return;DB.set('au_certifs',DB.get('au_certifs',[]).map(c=>c.id===id?{...c,status:s}:c));renderFormation();}
 function deleteExpense(id){if(!isAdri())return;DB.set('au_expenses',DB.get('au_expenses',[]).filter(e=>e.id!==id));renderFormation();}
+function addECat(){if(!isAdri())return;const inp=document.getElementById('ecat-inp');const val=(inp.value||'').trim().toLowerCase();if(!val)return;const cats=DB.get('au_ecats',[]);if(cats.includes(val)||ECATS.includes(val))return;cats.push(val);DB.set('au_ecats',cats);inp.value='';renderFormation();}
+function deleteECat(c){if(!isAdri())return;DB.set('au_ecats',DB.get('au_ecats',[]).filter(x=>x!==c));renderFormation();}
 
 // ─── TASKS ────────────────────────────────────────────────
 let tasksView='list',tasksFilter='todo';
@@ -846,7 +920,10 @@ function renderPostit(){
         <div class="mdj-card">
           <div class="mdj-text">${esc(data.text)}</div>
           <div class="mdj-from">Envoyé le ${date}</div>
-        </div>`;
+        </div>
+        <button class="btn w-btn" style="margin-top:8px;color:#f1948a;width:100%;justify-content:center" onclick="deleteMotDuJour()">
+          <i class="ti ti-trash"></i> Supprimer le message
+        </button>`;
     }else{
       display.innerHTML=`
         <div class="mdj-card" style="padding:0;overflow:hidden">
@@ -864,6 +941,10 @@ function renderPostit(){
 }
 function likeMotDuJour(){
   fbRef.update({liked:true});
+}
+function deleteMotDuJour(){
+  if(!isAdri())return;
+  fbRef.remove();
 }
 function saveMotDuJour(){
   if(!isAdri())return;
