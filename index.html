@@ -638,17 +638,20 @@ function deleteVCat(c){if(!isAdri())return;DB.set('au_vcats',DB.get('au_vcats',[
 // ─── FORMATION ────────────────────────────────────────────
 let formSub='certifs',formView='list',formEditId=null;
 const ECATS=['formation','transport','logement','nourriture','équipement','santé','autre'];
-const expCats=()=>[...ECATS,...DB.get('au_ecats',[])];
+const CCATS=['sécurité','administratif','métier','langue','santé','informatique'];
+const certifCats=()=>[...CCATS,...DB.get('au_ccats',[])];
 function renderFormation(){
   const el=document.getElementById('formation');
   const certifs=DB.get('au_certifs',[]);
   const expenses=DB.get('au_expenses',[]);
   if(formView==='add-certif'||formView==='edit-certif'){
     const ec=formEditId?certifs.find(c=>c.id===formEditId):null;
+    const cats=certifCats();
     el.innerHTML=`
       <button class="back-btn" onclick="formView='list';formEditId=null;renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
       <div class="h2"><i class="ti ti-certificate"></i>${ec?'Modifier':'Nouvelle'} certification</div>
       <input class="inp" id="c-name" placeholder="Nom *" value="${ec?ec.name:''}"/>
+      <select class="inp" id="c-cat">${cats.map(c=>`<option value="${c}" ${(ec?.category||'')===c?'selected':''}>${c}</option>`).join('')}</select>
       <select class="inp" id="c-status">
         ${Object.entries(CST).map(([k,[v]])=>`<option value="${k}" ${(ec?ec.status:'todo')===k?'selected':''}>${v}</option>`).join('')}
       </select>
@@ -658,38 +661,37 @@ function renderFormation(){
       <button class="btn btn-acc" style="width:100%" onclick="saveCertif()">Enregistrer</button>`;
     return;
   }
-  if(formView==='add-exp'){
-    const cats=expCats();
+  if(formView==='cats-certif'){
+    const custom=DB.get('au_ccats',[]);
     el.innerHTML=`
-      <button class="back-btn" onclick="formView='list';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
-      <div class="h2"><i class="ti ti-coin"></i>Nouvelle dépense</div>
-      <input class="inp" id="e-desc" placeholder="Description *"/>
-      <input class="inp" type="number" id="e-amt" placeholder="Montant (AUD) *"/>
-      <select class="inp" id="e-cat">${cats.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
-      <input class="inp" type="date" id="e-date" value="${new Date().toISOString().slice(0,10)}"/>
-      <button class="btn btn-acc" style="width:100%" onclick="saveExpense()">Enregistrer</button>`;
-    return;
-  }
-  if(formView==='cats-exp'){
-    const custom=DB.get('au_ecats',[]);
-    el.innerHTML=`
-      <button class="back-btn" onclick="formView='list';formSub='expenses';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
-      <div class="h2"><i class="ti ti-tag"></i>Catégories de dépenses</div>
+      <button class="back-btn" onclick="formView='list';formSub='certifs';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
+      <div class="h2"><i class="ti ti-tag"></i>Catégories de certifications</div>
       <div class="sec-title">Par défaut</div>
       <div style="display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px">
-        ${ECATS.map(c=>`<span style="padding:5px 12px;border-radius:20px;background:var(--bg3);font-size:13px;color:var(--text2)">${c}</span>`).join('')}
+        ${CCATS.map(c=>`<span style="padding:5px 12px;border-radius:20px;background:var(--bg3);font-size:13px;color:var(--text2)">${c}</span>`).join('')}
       </div>
       <div class="sec-title">Mes catégories</div>
       ${custom.length===0?`<div class="small muted" style="margin-bottom:14px">Aucune catégorie personnalisée</div>`:''}
       ${custom.map(c=>`
         <div class="card row" style="margin-bottom:7px;justify-content:space-between">
           <span style="font-size:14px">${c}</span>
-          <button class="btn-icon w-btn" onclick="deleteECat('${c}')"><i class="ti ti-trash" style="font-size:16px"></i></button>
+          <button class="btn-icon w-btn" onclick="deleteCCat('${c}')"><i class="ti ti-trash" style="font-size:16px"></i></button>
         </div>`).join('')}
       <div style="display:flex;gap:8px;margin-top:8px">
-        <input class="inp" id="ecat-inp" placeholder="Nouvelle catégorie…" style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')addECat()"/>
-        <button class="btn btn-acc w-btn" onclick="addECat()"><i class="ti ti-plus"></i></button>
+        <input class="inp" id="ccat-inp" placeholder="Nouvelle catégorie…" style="margin-bottom:0;flex:1" onkeydown="if(event.key==='Enter')addCCat()"/>
+        <button class="btn btn-acc w-btn" onclick="addCCat()"><i class="ti ti-plus"></i></button>
       </div>`;
+    return;
+  }
+  if(formView==='add-exp'){
+    el.innerHTML=`
+      <button class="back-btn" onclick="formView='list';renderFormation()"><i class="ti ti-arrow-left"></i>Retour</button>
+      <div class="h2"><i class="ti ti-coin"></i>Nouvelle dépense</div>
+      <input class="inp" id="e-desc" placeholder="Description *"/>
+      <input class="inp" type="number" id="e-amt" placeholder="Montant (AUD) *"/>
+      <select class="inp" id="e-cat">${ECATS.map(c=>`<option value="${c}">${c}</option>`).join('')}</select>
+      <input class="inp" type="date" id="e-date" value="${new Date().toISOString().slice(0,10)}"/>
+      <button class="btn btn-acc" style="width:100%" onclick="saveExpense()">Enregistrer</button>`;
     return;
   }
   const totalDep=expenses.reduce((s,e)=>s+(parseFloat(e.amount)||0),0);
@@ -701,7 +703,8 @@ function renderFormation(){
       <button class="subtab ${formSub==='expenses'?'on':''}" onclick="formSub='expenses';renderFormation()">Dépenses</button>
     </div>
     ${formSub==='certifs'?`
-      <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
+        <button class="btn btn-sm w-btn" onclick="formView='cats-certif';renderFormation()"><i class="ti ti-tag"></i> Catégories</button>
         <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-certif';formEditId=null;renderFormation()">+ Ajouter</button>
       </div>
       ${certifs.length===0?`<div class="empty"><i class="ti ti-certificate"></i>Aucune certification</div>`:
@@ -711,6 +714,7 @@ function renderFormation(){
               <div style="font-weight:500;flex:1">${c.name}</div>
               <span class="pill ${CST[c.status][1]}">${CST[c.status][0]}</span>
             </div>
+            ${c.category?`<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--bg3);color:var(--text3);display:inline-block;margin-bottom:5px">${c.category}</span>`:''}
             ${c.date?`<div class="small muted"><i class="ti ti-calendar"></i> ${c.date}</div>`:''}
             ${c.cost?`<div class="small t-acc" style="margin-top:2px">${parseFloat(c.cost).toFixed(2)} AUD</div>`:''}
             ${c.notes?`<div class="small muted" style="margin-top:4px">${c.notes}</div>`:''}
@@ -732,8 +736,7 @@ function renderFormation(){
           ${Object.entries(bycat).map(([cat,amt])=>`<span style="font-size:11px;padding:2px 7px;border-radius:4px;background:var(--bg2);color:var(--text2);border:0.5px solid var(--border)">${cat}: ${Math.round(amt)}</span>`).join('')}
         </div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:11px">
-        <button class="btn btn-sm w-btn" onclick="formView='cats-exp';renderFormation()"><i class="ti ti-tag"></i> Catégories</button>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:11px">
         <button class="btn btn-acc btn-sm w-btn" onclick="formView='add-exp';renderFormation()">+ Dépense</button>
       </div>
       ${expenses.length===0?`<div class="empty"><i class="ti ti-coin"></i>Aucune dépense</div>`:
@@ -755,7 +758,7 @@ function saveCertif(){
   if(!isAdri())return;
   const n=document.getElementById('c-name').value.trim();
   if(!n)return;
-  const data={name:n,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value};
+  const data={name:n,category:document.getElementById('c-cat').value,status:document.getElementById('c-status').value,date:document.getElementById('c-date').value,cost:document.getElementById('c-cost').value,notes:document.getElementById('c-notes').value};
   const certifs=DB.get('au_certifs',[]);
   if(formEditId){DB.set('au_certifs',certifs.map(c=>c.id===formEditId?{...c,...data}:c));}
   else{certifs.push({id:uid(),...data});DB.set('au_certifs',certifs);}
@@ -766,8 +769,8 @@ function deleteCertif(id){if(!isAdri())return;DB.set('au_certifs',DB.get('au_cer
 function saveExpense(){if(!isAdri())return;const d=document.getElementById('e-desc').value.trim(),a=document.getElementById('e-amt').value;if(!d||!a)return;const e=DB.get('au_expenses',[]);e.push({id:uid(),description:d,amount:a,category:document.getElementById('e-cat').value,date:document.getElementById('e-date').value});DB.set('au_expenses',e);formView='list';renderFormation();}
 function updateCertifStatus(id,s){if(!isAdri())return;DB.set('au_certifs',DB.get('au_certifs',[]).map(c=>c.id===id?{...c,status:s}:c));renderFormation();}
 function deleteExpense(id){if(!isAdri())return;DB.set('au_expenses',DB.get('au_expenses',[]).filter(e=>e.id!==id));renderFormation();}
-function addECat(){if(!isAdri())return;const inp=document.getElementById('ecat-inp');const val=(inp.value||'').trim().toLowerCase();if(!val)return;const cats=DB.get('au_ecats',[]);if(cats.includes(val)||ECATS.includes(val))return;cats.push(val);DB.set('au_ecats',cats);inp.value='';renderFormation();}
-function deleteECat(c){if(!isAdri())return;DB.set('au_ecats',DB.get('au_ecats',[]).filter(x=>x!==c));renderFormation();}
+function addCCat(){if(!isAdri())return;const inp=document.getElementById('ccat-inp');const val=(inp.value||'').trim().toLowerCase();if(!val)return;const cats=DB.get('au_ccats',[]);if(cats.includes(val)||CCATS.includes(val))return;cats.push(val);DB.set('au_ccats',cats);inp.value='';renderFormation();}
+function deleteCCat(c){if(!isAdri())return;DB.set('au_ccats',DB.get('au_ccats',[]).filter(x=>x!==c));renderFormation();}
 
 // ─── TASKS ────────────────────────────────────────────────
 let tasksView='list',tasksFilter='todo';
