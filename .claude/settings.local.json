@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(Get-ChildItem -Recurse -File)",
-      "Bash(Select-Object FullName)"
+      "Bash(Select-Object FullName)",
+      "Bash(node --input-type=module)",
+      "Bash(node -e ' *)",
+      "Bash(node --check \"c:/temp/test_script.js\")",
+      "Bash(node --check \"c:/Users/adria/test_script.js\")",
+      "Bash(node -e \"require\\('fs'\\).unlinkSync\\('c:/Users/adria/test_script.js'\\)\")"
     ]
   }
 }
